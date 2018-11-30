@@ -2,6 +2,7 @@ from random import *
 from time import *
 from graphics import *
 from math import *
+from tkinter import *
 
 # Global variables
 
@@ -10,13 +11,37 @@ screenHeight = 600
 # Width of the window.
 screenWidth = 600
 # Drag... in space
-drag = 0.0006
+drag = 0.0001
 # Whether the window is open or not
 open = True
 
 win = GraphWin("Space", screenWidth, screenHeight)
 win.setBackground(color_rgb(0,0,0))
 win.autoflush = False
+
+keysPressed = []
+
+def down(e):
+    global keysPressed
+    if (len(keysPressed) == 0):
+        keysPressed.append(e.char)
+    else:
+        notIn = True
+        for i in range(len(keysPressed)-1, -1, -1):
+            if e.char == keysPressed[i]:
+                notIn = False
+        if notIn == True:
+            keysPressed.append(e.char)
+
+
+def up(e):
+    global keysPressed
+    for i in range(len(keysPressed)-1, -1, -1):
+        if e.char == keysPressed[i]:
+            del keysPressed[i]
+
+win.master.bind_all('<KeyPress>', down)
+win.master.bind_all('<KeyRelease>', up)
 
 def add(v1,v2):
     return [v1[0]+v2[0],v1[1]+v2[1]]
@@ -106,10 +131,13 @@ class Ship(SpaceObject):
         self.mHp = 10;
         self.hp = self.mHp;
         self.angle = angle;
-        self.topSpeed = 0.01;
+        self.angVel = 0;
+        self.topSpeed = 0.03;
 
     def update(self):
         super().update()
+        self.angle += self.angVel
+        self.angVel *= 0.999
         if mag(self.vel) > self.topSpeed:
             self.vel = normalize(self.vel)
             self.vel = mult(self.vel,self.topSpeed)
@@ -122,7 +150,7 @@ class Player(Ship):
         super().__init__(pos, vel, angle, mass)
         self.shipImg = Point(0,0)
         self.draw()
-        self.topSpeed = 0.01;
+        self.topSpeed = 0.03;
 
     def update(self):
         super().update()
@@ -133,7 +161,7 @@ class Player(Ship):
     def draw(self):
         self.shipImg.undraw()
         self.shipPoints = []
-        self.shipPoints.append([0,0])
+        self.shipPoints.append([0,2])
         self.shipPoints.append([-6,8])
         self.shipPoints.append([0,-8])
         self.shipPoints.append([6,8])
@@ -148,17 +176,24 @@ class Player(Ship):
         self.shipImg.draw(win)
 
     def control(self):
-        print(_root.keysym)
+        keys = keysPressed
+        for i in range(len(keys)):
+            if keys[i] == "w":
+                self.force(rotate([0,-0.0001],self.angle))
+            if keys[i] == "a":
+                self.angVel -= 0.000003
+            if keys[i] == "s":
+                self.force(rotate([0,0.0001],self.angle))
+            if keys[i] == "d":
+                self.angVel += 0.000003
 
-bob = Player(c.pos,[0,0],radians(0),10)
+player = Player(c.pos,[0,0],radians(0),10)
 
 while open:
-    bob.control()
-    bob.update()
+    print(player.pos)
+    player.update()
     c.update()
-    bob.force()
-    bob.draw()
-    print(bob.pos)
-    print(c.cpos())
-    c.force(div(sub(bob.pos,c.pos),1000000))
-    win.flush()
+    player.draw()
+    player.control()
+    c.pos = add(div(sub(player.pos,c.pos),2500),c.pos)
+    win.update()
